@@ -4,6 +4,10 @@ This repo holds a small AI agent that answers customers' questions about their o
 
 The agent itself is short. Most of the code deals with production questions: who may call it, what the model can reach, what a conversation costs. The tests run the deployable file the way AgentCore runs it.
 
+## Architecture
+
+![Backend calls AgentCore Runtime, which reads Memory, calls Nova 2 Lite and queries the orders table](docs/architecture.png)
+
 ## What it does
 
 A customer types a question in your app. Your backend, signed in as an IAM role, sends it to the agent:

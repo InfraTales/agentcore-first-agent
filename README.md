@@ -46,7 +46,7 @@ It answers in JSON with `reply`, `stopReason` and token `usage`.
 
 ## Deploy
 
-You need Node.js 22.12 or later (CI uses 24), Docker (for DynamoDB Local, which the tests use), AWS credentials, and a CDK-bootstrapped account in a US Region: us-east-1, us-east-2 or us-west-2. The model goes through the `us.` inference profile, and synth stops with an error in any Region that profile can't be called from. The `us.` profile also works from us-west-1, but AgentCore Memory isn't available there. The stack deploys to your AWS profile's Region, or `AWS_REGION` if you set it, and to us-east-1 if neither is set.
+You need Node.js 22.12 or later (CI uses 24), Docker (for DynamoDB Local, which the tests use), AWS credentials, and a CDK-bootstrapped account in a US Region: us-east-1, us-east-2 or us-west-2. The model goes through the `us.` inference profile, and synth stops with an error in any other Region. Those three are where the profile keeps requests in the US and AgentCore has both Runtime and Memory. The profile also works from us-west-1, but Memory isn't available there. The stack deploys to your AWS profile's Region, or `AWS_REGION` if you set it, and to us-east-1 if neither is set.
 
 ```bash
 npm ci

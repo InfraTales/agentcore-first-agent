@@ -127,12 +127,18 @@ it('never grants the endpoint ARN form that IAM does not use', () => {
   expect(doc).not.toContain('/endpoint/');
 });
 
-it.each(['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2'])('synthesizes in %s, a source Region of the us. profile', (region) => {
+it.each(['us-east-1', 'us-east-2', 'us-west-2'])('synthesizes in %s, where the us. profile, Runtime and Memory all work', (region) => {
   expect(() => new OrderAgentStack(testApp(), 'UsRegion', { env: { ...env, region } })).not.toThrow();
 });
 
 it.each(['eu-west-1', 'ap-northeast-1', 'ca-central-1'])('stops synth in %s, where the us. profile would fail or leave the US', (region) => {
   expect(() => new OrderAgentStack(testApp(), 'OtherRegion', { env: { ...env, region } })).toThrow(`can't be called from ${region}`);
+});
+
+it('stops synth in us-west-1, where the us. profile works but AgentCore Memory is missing', () => {
+  expect(() => new OrderAgentStack(testApp(), 'NoMemory', { env: { ...env, region: 'us-west-1' } })).toThrow(
+    "AgentCore Runtime or Memory isn't available in us-west-1. Deploy to one of us-east-1, us-east-2, us-west-2",
+  );
 });
 
 it('stops synth when the stack has no Region', () => {

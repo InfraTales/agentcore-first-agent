@@ -26,6 +26,18 @@ export const MODEL_PROFILES: Record<string, ModelProfile> = {
   },
 };
 
+/**
+ * Regions where AgentCore offers both Runtime (microVMs) and Memory, from the
+ * AgentCore "Supported AWS Regions" page (checked 2026-10-16). Runtime runs in
+ * more Regions, but this stack also creates a Memory resource.
+ */
+export const RUNTIME_AND_MEMORY_REGIONS: readonly string[] = [
+  'us-east-1', 'us-east-2', 'us-west-2',
+  'eu-central-1', 'eu-west-1', 'eu-west-2', 'eu-west-3', 'eu-north-1',
+  'ap-south-1', 'ap-southeast-1', 'ap-southeast-2', 'ap-northeast-1', 'ap-northeast-2',
+  'ca-central-1', 'sa-east-1', 'us-gov-west-1',
+];
+
 export const DEFAULT_MODEL_ID = 'us.amazon.nova-2-lite-v1:0';
 
 export function resolveModel(modelId: string | undefined): ModelProfile {
@@ -37,15 +49,26 @@ export function resolveModel(modelId: string | undefined): ModelProfile {
   return profile;
 }
 
+/** Regions where the profile can be called and AgentCore has Runtime and Memory. */
+export function deployableRegions(profile: ModelProfile): string[] {
+  return profile.sourceRegions.filter((r) => RUNTIME_AND_MEMORY_REGIONS.includes(r));
+}
+
 /**
- * Stops synth when the stack's Region can't call the profile. Without this, the
- * deploy can succeed while every model call fails at run time.
+ * Stops synth when the stack's Region can't call the profile, or lacks AgentCore
+ * Runtime or Memory. Without this, the deploy can succeed while every model call
+ * fails at run time, or fail late in CloudFormation.
  */
 export function assertRegionSupported(profile: ModelProfile, region: string): void {
+  const allowed = deployableRegions(profile).join(', ');
+  const hint = '(set AWS_REGION or the Region in your AWS profile)';
   if (!profile.sourceRegions.includes(region)) {
     throw new Error(
-      `${profile.profileId} can't be called from ${region}. Deploy to one of ${profile.sourceRegions.join(', ')} ` +
-        '(set AWS_REGION or the Region in your AWS profile), or pass -c modelId=<profile for your Region> and add it to infra/lib/models.ts.',
+      `${profile.profileId} can't be called from ${region}. Deploy to one of ${allowed} ${hint}, ` +
+        'or pass -c modelId=<profile for your Region> and add it to infra/lib/models.ts.',
     );
+  }
+  if (!RUNTIME_AND_MEMORY_REGIONS.includes(region)) {
+    throw new Error(`AgentCore Runtime or Memory isn't available in ${region}. Deploy to one of ${allowed} ${hint}.`);
   }
 }

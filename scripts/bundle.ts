@@ -1,0 +1,38 @@
+/**
+ * Builds build/agent/index.js: the agent and every dependency in one CommonJS
+ * file. CDK zips build/agent and uploads it to S3, and AgentCore Runtime starts it
+ * with the NODE_22 managed runtime. The contract tests run this same file.
+ */
+import { rmSync, writeFileSync } from 'node:fs';
+import * as path from 'node:path';
+import { buildSync } from 'esbuild';
+
+const root = path.join(__dirname, '..');
+const outdir = path.join(root, 'build', 'agent');
+
+rmSync(outdir, { recursive: true, force: true });
+const result = buildSync({
+  entryPoints: [path.join(root, 'agent', 'src', 'server.ts')],
+  outfile: path.join(outdir, 'index.js'),
+  bundle: true,
+  platform: 'node',
+  target: 'node22',
+  format: 'cjs',
+  minify: true,
+  sourcemap: true,
+  legalComments: 'none',
+  metafile: true,
+  // Strands and the AgentCore SDK are ES modules that call createRequire(import.meta.url).
+  // In a CommonJS bundle import.meta.url is empty, so give it this file's URL. Without
+  // this the agent crashes on start, before it ever answers /ping.
+  banner: { js: "const __importMetaUrl = require('node:url').pathToFileURL(__filename).href;" },
+  define: { 'import.meta.url': '__importMetaUrl' },
+  // ws tries these optional native add-ons inside try/catch and falls back to plain JS.
+  external: ['bufferutil', 'utf-8-validate'],
+});
+
+// Kept outside build/agent so it isn't deployed. The bundle test reads it.
+writeFileSync(path.join(root, 'build', 'meta.json'), JSON.stringify(result.metafile));
+
+const bytes = Object.values(result.metafile.outputs).reduce((sum, o) => sum + o.bytes, 0);
+console.log(`bundled ${path.relative(root, outdir)}/index.js (${(bytes / 1024).toFixed(0)} KiB with source map)`);

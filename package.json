@@ -1,0 +1,49 @@
+{
+  "name": "agentcore-first-agent",
+  "version": "1.0.0",
+  "description": "An order support agent on Amazon Bedrock AgentCore Runtime and Memory, built with Strands Agents (TypeScript) and AWS CDK.",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "lint": "eslint .",
+    "bundle": "tsx scripts/bundle.ts",
+    "test": "npm run bundle && vitest run",
+    "test:contract": "npm run bundle && vitest run -c vitest.contract.config.mts",
+    "synth": "cdk synth --quiet",
+    "check": "npm run build && npm run lint && npm test && npm run synth",
+    "deploy": "npm run bundle && cdk deploy",
+    "destroy": "cdk destroy",
+    "smoke": "tsx scripts/smoke-test.ts",
+    "seed": "tsx scripts/seed-orders.ts"
+  },
+  "license": "MIT-0",
+  "dependencies": {
+    "@aws-sdk/client-bedrock-agentcore": "^3.1152.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1152.0",
+    "@aws-sdk/client-dynamodb": "^3.1152.0",
+    "@aws-sdk/lib-dynamodb": "^3.1152.0",
+    "@aws-sdk/util-dynamodb": "^3.996.9",
+    "@strands-agents/sdk": "1.20.0",
+    "aws-cdk-lib": "^2.273.0",
+    "bedrock-agentcore": "0.4.5",
+    "cdk-nag": "^3.0.2",
+    "constructs": "^10.8.1",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-cloudformation": "^3.1152.0",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.5",
+    "aws-cdk": "^2.1145.0",
+    "aws-sdk-client-mock": "^4.1.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.12.0",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.71.2",
+    "vitest": "^5.0.3"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22.12"
+  }
+}

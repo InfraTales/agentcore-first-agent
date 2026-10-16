@@ -1,0 +1,7 @@
+node_modules/
+cdk.out/
+build/
+coverage/
+*.log
+.DS_Store
+cdk.context.json

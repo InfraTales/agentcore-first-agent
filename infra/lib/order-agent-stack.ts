@@ -6,7 +6,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3Assets from 'aws-cdk-lib/aws-s3-assets';
 import type { Construct } from 'constructs';
-import { resolveModel } from './models';
+import { assertRegionSupported, resolveModel } from './models';
 
 export interface OrderAgentStackProps extends cdk.StackProps {
   /** Bedrock inference profile ID. Defaults to DEFAULT_MODEL_ID in models.ts. */
@@ -37,6 +37,10 @@ export class OrderAgentStack extends cdk.Stack {
     super(scope, id, props);
     this.modelId = props.modelId;
     const model = resolveModel(props.modelId);
+    if (cdk.Token.isUnresolved(this.region)) {
+      throw new Error('Set a Region for this stack (env.region, or AWS_REGION when you run cdk). The model profile only works from some Regions.');
+    }
+    assertRegionSupported(model, this.region);
 
     // Orders, keyed by customer. Every read and write names the customer in the key.
     this.table = new dynamodb.TableV2(this, 'Orders', {
@@ -102,7 +106,8 @@ export class OrderAgentStack extends cdk.Stack {
         new iam.PolicyStatement({
           actions: ['bedrock-agentcore:InvokeAgentRuntime'],
           // IAM checks the call against the runtime and the endpoint it lands on.
-          resources: [this.runtime.attrAgentRuntimeArn, `${this.runtime.attrAgentRuntimeArn}/endpoint/*`],
+          // Endpoint ARNs are runtime/<id>/runtime-endpoint/<name>; DEFAULT is the one AgentCore creates.
+          resources: [this.runtime.attrAgentRuntimeArn, `${this.runtime.attrAgentRuntimeArn}/runtime-endpoint/*`],
         }),
       ],
     });
@@ -200,7 +205,7 @@ export class OrderAgentStack extends cdk.Stack {
     ack(`${logs}:/aws/bedrock-agentcore/runtimes/*:log-stream:*`, 'Log streams inside the AgentCore runtime log groups; names are chosen by the service per session.');
     ack(`${logs}:*`, 'logs:DescribeLogGroups has no resource-level scoping beyond the account log-group ARN; listed in the AgentCore runtime permissions docs.');
     cdk.Validations.of(this.invokePolicy).acknowledge({
-      id: 'AwsSolutions::AwsSolutions-IAM5[Resource::<Runtime.AgentRuntimeArn>/endpoint/*]',
+      id: 'AwsSolutions::AwsSolutions-IAM5[Resource::<Runtime.AgentRuntimeArn>/runtime-endpoint/*]',
       reason: 'Endpoints of this one runtime only. DEFAULT is created by AgentCore and later endpoints (for versions) keep working without a policy change.',
     });
     ack('*', 'X-Ray trace calls do not support resource-level permissions, and cloudwatch:PutMetricData is limited to the bedrock-agentcore namespace by a condition.');

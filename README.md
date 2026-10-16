@@ -46,17 +46,20 @@ It answers in JSON with `reply`, `stopReason` and token `usage`.
 
 ## Deploy
 
-You need Node.js 22.12 or later (CI uses 24), AWS credentials, and a CDK-bootstrapped account in a Region that has AgentCore Runtime and Memory. The stack deploys to us-east-1 unless `CDK_DEFAULT_REGION` says otherwise.
+You need Node.js 22.12 or later (CI uses 24), Docker (for DynamoDB Local, which the tests use), AWS credentials, and a CDK-bootstrapped account in a US Region: us-east-1, us-east-2 or us-west-2. The model goes through the `us.` inference profile, and synth stops with an error in any Region that profile can't be called from. The `us.` profile also works from us-west-1, but AgentCore Memory isn't available there. The stack deploys to your AWS profile's Region, or `AWS_REGION` if you set it, and to us-east-1 if neither is set.
 
 ```bash
 npm ci
+docker run -d --name ddb-local -p 8019:8000 amazon/dynamodb-local:3.3.2
+export AWS_ENDPOINT_URL_DYNAMODB=http://localhost:8019   # only for the tests; unset it before deploy, seed and smoke
 npm run check     # type check, lint, bundle, tests, synth with cdk-nag
+unset AWS_ENDPOINT_URL_DYNAMODB
 npm run deploy
 npm run seed      # sample orders for two customers
 npm run smoke     # three real calls to the deployed agent
 ```
 
-Bedrock enables Amazon Nova models for an account by default. To change the model, pass `-c modelId=<inference profile ID>` and add the profile to `infra/lib/models.ts`, so the stack can grant it.
+Bedrock enables Amazon Nova models for an account by default. To change the model, pass `-c modelId=<inference profile ID>` and add the profile, with the Regions it can be called from, to `infra/lib/models.ts`, so the stack can grant it.
 
 ## Tests
 

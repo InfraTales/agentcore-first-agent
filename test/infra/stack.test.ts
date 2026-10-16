@@ -115,11 +115,28 @@ it('gives callers InvokeAgentRuntime on this runtime and its endpoints only', ()
       Statement: [
         {
           Action: 'bedrock-agentcore:InvokeAgentRuntime',
-          Resource: [{ 'Fn::GetAtt': ['Runtime', 'AgentRuntimeArn'] }, { 'Fn::Join': ['', [{ 'Fn::GetAtt': ['Runtime', 'AgentRuntimeArn'] }, '/endpoint/*']] }],
+          Resource: [{ 'Fn::GetAtt': ['Runtime', 'AgentRuntimeArn'] }, { 'Fn::Join': ['', [{ 'Fn::GetAtt': ['Runtime', 'AgentRuntimeArn'] }, '/runtime-endpoint/*']] }],
         },
       ],
     },
   });
+});
+
+it('never grants the endpoint ARN form that IAM does not use', () => {
+  const doc = JSON.stringify(template.findResources('AWS::IAM::ManagedPolicy'));
+  expect(doc).not.toContain('/endpoint/');
+});
+
+it.each(['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2'])('synthesizes in %s, a source Region of the us. profile', (region) => {
+  expect(() => new OrderAgentStack(testApp(), 'UsRegion', { env: { ...env, region } })).not.toThrow();
+});
+
+it.each(['eu-west-1', 'ap-northeast-1', 'ca-central-1'])('stops synth in %s, where the us. profile would fail or leave the US', (region) => {
+  expect(() => new OrderAgentStack(testApp(), 'OtherRegion', { env: { ...env, region } })).toThrow(`can't be called from ${region}`);
+});
+
+it('stops synth when the stack has no Region', () => {
+  expect(() => new OrderAgentStack(testApp(), 'NoRegion', {})).toThrow('Set a Region');
 });
 
 it('keeps point-in-time recovery on for orders', () => {
